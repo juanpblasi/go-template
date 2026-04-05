@@ -1,93 +1,93 @@
 # Go Microservice Template
 
-Este es un *template* para la creación rápida de microservicios en Go siguiendo el [Standard Go Project Layout](https://github.com/golang-standards/project-layout) y las mejores prácticas de la industria.
+This is a template for rapidly building Go microservices following the [Standard Go Project Layout](https://github.com/golang-standards/project-layout) and industry best practices.
 
-## 🚀 Stack Tecnológico
+## Technology Stack
 
-*   **Lenguaje:** Go ^1.24
-*   **Enrutador HTTP:** [Chi](https://github.com/go-chi/chi) (Ligero e idiomático)
-*   **Comunicación Interna:** gRPC & Protocol Buffers
-*   **Base de Datos / ORM:** PostgreSQL & [GORM](https://gorm.io/)
-*   **Configuración:** [Viper](https://github.com/spf13/viper) (.yaml y Variables de Entorno)
-*   **Observabilidad/Logging:** [Zap](https://github.com/uber-go/zap) (Logs estructurados en JSON)
+*   **Language:** Go ^1.24
+*   **HTTP Router:** [Chi](https://github.com/go-chi/chi) (Lightweight and idiomatic)
+*   **Internal Communication:** gRPC & Protocol Buffers
+*   **Database / ORM:** PostgreSQL & [GORM](https://gorm.io/)
+*   **Configuration:** [Viper](https://github.com/spf13/viper) (.yaml files and Environment Variables)
+*   **Observability/Logging:** [Zap](https://github.com/uber-go/zap) (Structured JSON logging)
 
-## 🏗️ Arquitectura y Buenas Prácticas
+## Architecture & Best Practices
 
-Este proyecto está construido con un fuerte énfasis en:
-*   **Graceful Shutdown:** Intercepta `SIGTERM` y `SIGINT` para asegurar que las conexiones existenes (HTTP y gRPC) y las transacciones a bases de datos finalicen antes de que muera el proceso.
-*   **Context Propagation:** Uso intensivo del `context.Context` desde la base (Handler) hasta el Access Data (DB) permitiendo control de Cancelaciones y Timeouts.
-*   **Dependency Injection (DI):** Sin variables globales ni funciones `init()`. Todo se instancia en `cmd/server/main.go` a través de constructores (`NewX()`).
-*   **Manejo de Errores Unificado:** Capa agnóstica de errores de dominio en `pkg/errors` que es mapeada automáticamente a Códigos HTTP específicos y Códigos de gRPC.
-*   **Health Checks para K8s:** Endpoints expuestos (`/healthz` y `/ready`) diseñados para las *probes* de liveness y readiness de Kubernetes.
+This project is built with a strong focus on:
+*   **Graceful Shutdown:** Intercepts `SIGTERM` and `SIGINT` signals to ensure that existing connections (both HTTP and gRPC) and database transactions finish properly before the process exits.
+*   **Context Propagation:** Extensive use of `context.Context` from the entry point (Handlers) all the way down to data access layers (DB), allowing for proper timeout and cancellation controls.
+*   **Dependency Injection (DI):** No global variables or `init()` functions are used. Everything is instantiated in `cmd/server/main.go` using constructors (`NewX()`).
+*   **Unified Error Handling:** An agnostic domain-error encapsulation layer under `pkg/errors` that automatically maps to specific HTTP and gRPC status codes at the transport level.
+*   **Health Checks for K8s:** Exposed endpoints (`/healthz` and `/ready`) explicitly designed for Kubernetes liveness and readiness probes.
 
-## 📂 Estructura de Directorios
+## Directory Structure
 
 ```plaintext
 .
-├── api/             # Contratos de APIs y definición de Protocol Buffers
-│   └── proto/       # .proto files (ej: user.proto) y sus auto-generados (*.pb.go)
+├── api/             # API Contracts and Protocol Buffers definitions
+│   └── proto/       # .proto files (e.g., user.proto) and their auto-generated code
 ├── cmd/
-│   └── server/      # Entrypoint (func main) y armado/arranque (DI) de la app.
-├── internal/        # (Private) Lógica exclusiva de este microservicio
-│   ├── config/      # Carga y estructuración de Viper
-│   ├── handler/     # Endpoints HTTP (Chi) y gRPC. Punto de entrada de requests.
-│   ├── repository/  # Acceso a base de datos (Postgres, GORM, queries).
-│   ├── server/      # Wrappers para instanciar Listeners HTTP y gRPC.
-│   └── service/     # Lógica central del Negocio (Business logic de la Entidad).
-├── pkg/             # Código de propósito general (exportable para reuso)
-│   ├── errors/      # Encapsulador de Status y tipos de errores.
-│   └── logger/      # Setup global del sistema de logging Zap.
-├── Makefile         # Scripts para correr automatismos rápidos
-└── config.yaml      # Variables iniciales del ambiente (puertos, DB, etc.)
+│   └── server/      # Entrypoint (main func) and application wiring (DI).
+├── internal/        # (Private) Specific logic for this microservice
+│   ├── config/      # Viper loading and struct definitions
+│   ├── handler/     # HTTP endpoint routing (Chi) and gRPC bindings.
+│   ├── repository/  # Database access layer (PostgreSQL, GORM definitions).
+│   ├── server/      # Go wrappers to spawn HTTP and gRPC Listeners.
+│   └── service/     # Core Business logic of the entities.
+├── pkg/             # General-purpose code (exportable for reuse)
+│   ├── errors/      # Status wrapper and application error types.
+│   └── logger/      # Global system logger initialization via Zap.
+├── Makefile         # Build automation scripts
+└── config.yaml      # Initial environment baseline variables (ports, db, etc.)
 ```
 
-## 🛠️ Cómo Utilizarlo (Guía Rápida)
+## Quick Start Guide
 
-Para iniciar, asegúrate de tener instalado `go`, `make`, y opcionalmente `docker` (para la base de datos local y compilación protoc).
+To get started, ensure you have `go`, `make`, and `docker` installed (Docker is used for spinning up a local db and compiling protoc).
 
-### 1. Levantar Dependencias
-El proyecto necesita PostgreSQL corriendo. Puedes levantar fácilmente una base de datos local temporal usando Docker:
+### 1. Boot up Dependencies
+The project requires PostgreSQL to run. You can easily start a temporary local database instance using Docker:
 ```bash
 docker run -d --rm --name go-template-db -e POSTGRES_USER=postgres -e POSTGRES_PASSWORD=password -e POSTGRES_DB=mydb -p 5432:5432 postgres:15
 ```
 
-### 2. Sincronizar Módulos y Compilar Proto
+### 2. Synchronize Modules & Compile Proto
 ```bash
-# Sincroniza librerías del go.mod
+# Sync go.mod libraries
 make tidy
 
-# Compila el código auto-generado gRPC en base al user.proto en la carpeta API
+# Compile the auto-generated gRPC code based on api/proto/v1/user.proto
 make proto
 ```
-*(Nota: El comando `make proto` intentará interactuar con tu binario de protoc local. Si no lo tienes configurado, te sugerimos utilizar la ruta del contenedor docker).*
+*(Note: The `make proto` command might attempt to interact with your local protoc binary. If you do not have it configured, there is a ready-to-use Docker snippet provided in the Makefile).*
 
-### 3. Ejecutar la Aplicación
-Inicia el microservicio:
+### 3. Run the Application
+Start the microservice:
 ```bash
 make run
 ```
-> Esto iniciará tanto el servidor gRPC en el puerto `9090` como el servidor HTTP en el `8080` (configurables vía `config.yaml` o variables de entorno).
+> This will start the gRPC server on port `9090` and the HTTP (REST) server on port `8080`. Ports are configurable via `config.yaml` or environment variables.
 
-## 🧪 Puntos de Prueba (Endpoints)
+## Testing Endpoints
 
-Una vez corriendo, puedes probar cómo interactúan el Service, Handler y el Repositorio de base de datos abriendo otra terminal:
+Once the application is running, open another terminal strictly to test how the Request travels through the Service, Handler, and the Repository:
 
-*   **Revisar Health:**
+*   **Check Health (REST):**
     ```bash
     curl -v http://localhost:8080/healthz
     ```
-*   **Crear un Usuario (Post a JSON):**
+*   **Create a User (REST POST to JSON):**
     ```bash
     curl -X POST http://localhost:8080/users \
        -H "Content-Type: application/json" \
-       -d '{"name": "Developer", "email": "dev@correo.com"}'
+       -d '{"name": "Developer", "email": "dev@company.com"}'
     ```
-*   **Obtener Usuario (Sustituir ID):**
+*   **Get User (Substitute UUID):**
     ```bash
-    curl http://localhost:8080/users/UUID-AQUI
+    curl http://localhost:8080/users/YOUR-GENERATED-UUID-HERE
     ```
 
-## 📝 Próximos Pasos (Modificando del Template)
-1.  **Cambia de Nombre del Módulo**: Sustituye `github.com/juanpblasi/go-template` a tu ruta real ejecutando un Reemplazo (Find & Replace).
-2.  **Muta el Dominio:** Cambia la palabra `user` en los `internal/service/`, `handler`, y `repository` por la entidad real de este microservicio.
-3.  **Agrega Modelos a gRPC:** Edita la carpeta `api/proto/` y ejecuta `make proto`.
+## Next Steps (Building upon this Template)
+1.  **Rename the Module:** Change the module path from `github.com/juanpblasi/go-template` to your actual repository path doing a global Search & Replace.
+2.  **Mutate the Domain:** Swap the word `user` in `internal/service/`, `handler`, and `repository` to reflect the main entity this microservice will handle.
+3.  **Add New gRPC Models:** Edit the `.proto` files located inside `api/proto/` and run `make proto` to generate new bindings.
